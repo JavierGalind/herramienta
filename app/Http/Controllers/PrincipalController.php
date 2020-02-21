@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use File;
 class PrincipalController extends Controller
 {
     /**
@@ -16,10 +16,46 @@ class PrincipalController extends Controller
         //
     }
 public function cxc(Request $request){
-  if(is_dir($request->carpeta)){
-    $total_imagenes = count(glob($request->carpeta.'/{*.xml}',GLOB_BRACE));
-    echo "total de imagenes: ".$total_imagenes;
-  }
+$files= $request->filess;
+foreach ($files as $fil) {
+  $comprobante = \CfdiUtils\Cfdi::newFromString(file_get_contents('C:/Users/Incretec Desarrollo/Desktop/CXC/'.$fil))
+      ->getQuickReader();
+
+
+    echo "<br>";
+        echo $comprobante['total']; // (string) "123.45"
+      echo "<br>";
+      echo $comprobante['fecha']; // (string) "123.45"
+    echo "<br>";
+    echo $comprobante->impuestos['totalImpuestosTrasladados']; // (string) "123.45"
+    echo "<br>";
+    echo $comprobante->emisor['nombre'];
+    echo "<br>";
+    echo $comprobante->emisor['rfc'];
+    echo "<br>";
+    echo $comprobante->receptor['nombre'];
+    echo "<br>";
+    echo $comprobante->receptor['rfc'];
+    echo "<br>";
+    echo $comprobante->complemento->timbreFiscalDigital['UUID']; // 2017-03-21T08:18:08
+    echo "<br>";
+
+    // usando asignación de variable
+$conceptos = $comprobante->conceptos;
+foreach($conceptos() as $concepto) {
+    // usando propiedad
+
+    foreach(($concepto->impuestos->traslados)() as $traslado) {
+        echo $traslado['impuesto'];
+        echo "<br>";
+        echo $traslado['importe'];
+        echo "<br>";
+    }
+    echo $concepto['descripcion'];
+    echo "<br>";
+}
+
+}
 }
     /**
      * Show the form for creating a new resource.
