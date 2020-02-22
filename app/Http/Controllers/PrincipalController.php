@@ -54,8 +54,17 @@ foreach($conceptos() as $concepto) {
     echo $concepto['descripcion'];
     echo "<br>";
 }
-
+//////////COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
+$rfc_emisor=$comprobante->emisor['rfc'];
+$nombre_emisor=$comprobante->emisor['nombre'];
+$this->registrar_proveedor($rfc_emisor,$nombre_emisor);
+//////////FIN COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
 }
+/////////////FIN FOR QUE RECORRE TODOS LOS ARCHIVOS
+}
+
+public function registrar_proveedor($rfc, $nombre){
+
 }
     /**
      * Show the form for creating a new resource.
