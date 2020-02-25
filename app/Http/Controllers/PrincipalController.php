@@ -39,7 +39,11 @@ foreach ($files as $fil) {
     echo "<br>";
     echo $comprobante->complemento->timbreFiscalDigital['UUID']; // 2017-03-21T08:18:08
     echo "<br>";
-
+    //////////COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
+    $rfc_emisor=$comprobante->emisor['rfc'];
+    $nombre_emisor=$comprobante->emisor['nombre'];
+    $this->registrar_proveedor($rfc_emisor,$nombre_emisor);
+    //////////FIN COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
     // usando asignación de variable
 $conceptos = $comprobante->conceptos;
 foreach($conceptos() as $concepto) {
@@ -54,17 +58,50 @@ foreach($conceptos() as $concepto) {
     echo $concepto['descripcion'];
     echo "<br>";
 }
-//////////COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
-$rfc_emisor=$comprobante->emisor['rfc'];
-$nombre_emisor=$comprobante->emisor['nombre'];
-$this->registrar_proveedor($rfc_emisor,$nombre_emisor);
-//////////FIN COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
+
+
 }
 /////////////FIN FOR QUE RECORRE TODOS LOS ARCHIVOS
 }
 
 public function registrar_proveedor($rfc, $nombre){
+  $cont1=0;
+  $db = dbase_open('C:/Users/Incretec Desarrollo/Desktop/DBF/pruebas.dbf', 2);
+  if ($db) {
+    $numero_registros = dbase_numrecords($db);
+  ////  echo $numero_registros;
+  ////  echo "<br>";
+    if ($numero_registros== 0) {
+      $cont=$numero_registros+1;
+      dbase_add_record($db, array($cont,$nombre, $rfc));
+    ////  echo "Primer registro";
+      echo "<br>";
+    }
+    else {
 
+        for ($i = 1; $i <= $numero_registros; $i++) {
+
+              $fila=dbase_get_record_with_names($db, $i);
+            $comparacion=str_replace(' ', '', $fila['RFC']);
+            $bandera=strcmp($comparacion, $rfc);
+             if($bandera == 0)
+               {
+                $cont1=$cont1+1;
+            ////    echo "Registro repetido";
+               }
+        }
+        echo $cont1;
+        if ($cont1 == 0) {
+          $num_registro=$numero_registros+1;
+          dbase_add_record($db, array($num_registro,$nombre, $rfc));
+          echo "Registrado Proveedor";
+        }
+
+    }
+
+
+    dbase_close($db);
+  }
 }
     /**
      * Show the form for creating a new resource.
