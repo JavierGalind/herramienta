@@ -17,3 +17,4 @@ Route::get('/', function () {
 
 Route::resource('/prueba', 'LecturaController');
 Route::get('/cxc', 'PrincipalController@cxc')->name('cxc');
+Route::get('/cxcindex', 'PrincipalController@index')->name('cxc.index');

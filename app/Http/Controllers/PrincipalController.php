@@ -13,57 +13,56 @@ class PrincipalController extends Controller
      */
     public function index()
     {
-        //
+    return view('cxc');
     }
 public function cxc(Request $request){
 $files= $request->filess;
 foreach ($files as $fil) {
   $comprobante = \CfdiUtils\Cfdi::newFromString(file_get_contents('C:/Users/Incretec Desarrollo/Desktop/CXC/'.$fil))
       ->getQuickReader();
-
-
-    echo "<br>";
-        echo $comprobante['total']; // (string) "123.45"
-      echo "<br>";
-      echo $comprobante['fecha']; // (string) "123.45"
-    echo "<br>";
-    echo $comprobante->impuestos['totalImpuestosTrasladados']; // (string) "123.45"
-    echo "<br>";
-    echo $comprobante->emisor['nombre'];
-    echo "<br>";
-    echo $comprobante->emisor['rfc'];
-    echo "<br>";
-    echo $comprobante->receptor['nombre'];
-    echo "<br>";
-    echo $comprobante->receptor['rfc'];
-    echo "<br>";
-    echo $comprobante->complemento->timbreFiscalDigital['UUID']; // 2017-03-21T08:18:08
-    echo "<br>";
-    //////////COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
+      $totalfactura= $comprobante['total'];
+      $foliofactura=$comprobante['folio'];
+      $tratarfecha=str_replace('-', '', $comprobante['fecha']);
+      $fechanueva=substr($tratarfecha, 0,8);
+      $dia=substr($fechanueva, 6,2);
+      $mes=substr($fechanueva, 4,2);
+      $anio=substr($fechanueva, 0,4);
+      $fechaarmada=$anio.$mes.$dia;
+      $tipo='1';
     $rfc_emisor=$comprobante->emisor['rfc'];
     $nombre_emisor=$comprobante->emisor['nombre'];
     $this->registrar_proveedor($rfc_emisor,$nombre_emisor);
+    $proveedor= $this->consultar_proveedor($rfc_emisor);
     //////////FIN COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
     // usando asignación de variable
-$conceptos = $comprobante->conceptos;
-foreach($conceptos() as $concepto) {
-    // usando propiedad
+    $conceptos = $comprobante->conceptos;
+     foreach($conceptos() as $concepto) {
+      // usando propiedad
 
     foreach(($concepto->impuestos->traslados)() as $traslado) {
-        echo $traslado['impuesto'];
-        echo "<br>";
-        echo $traslado['importe'];
-        echo "<br>";
+        $impuestos1=$traslado['importe'];
     }
-    echo $concepto['descripcion'];
-    echo "<br>";
+    $importe=$concepto['importe'];
+    $concepto_sat=$concepto['claveprodserv'];
+    $descripcion=$concepto['descripcion'];
+
+    $this->registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion);
 }
 
 
 }
 /////////////FIN FOR QUE RECORRE TODOS LOS ARCHIVOS
 }
-
+///////////REGISTRAR FACTURA
+public function registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion){
+  $db = dbase_open('C:/Users/Incretec Desarrollo/Desktop/DBF/ventas1.dbf', 2);
+  if ($db) {
+       dbase_add_record($db, array($foliofactura,$foliofactura,$fechaarmada,$importe,$impuestos1,'F','0.00',$fechaarmada,'F',$proveedor,$tipo,$concepto_sat,$descripcion,'0.00'));
+  dbase_close($db);
+  }
+  echo "REGISTRADO";
+}
+//////////FIN REGISTRAR FACTURA
 public function registrar_proveedor($rfc, $nombre){
   $cont1=0;
   $db = dbase_open('C:/Users/Incretec Desarrollo/Desktop/DBF/pruebas.dbf', 2);
@@ -90,7 +89,6 @@ public function registrar_proveedor($rfc, $nombre){
             ////    echo "Registro repetido";
                }
         }
-        echo $cont1;
         if ($cont1 == 0) {
           $num_registro=$numero_registros+1;
           dbase_add_record($db, array($num_registro,$nombre, $rfc));
@@ -103,6 +101,28 @@ public function registrar_proveedor($rfc, $nombre){
     dbase_close($db);
   }
 }
+
+
+public function consultar_proveedor($rfc){
+  $db = dbase_open('C:/Users/Incretec Desarrollo/Desktop/DBF/pruebas.dbf', 0);
+
+if ($db) {
+  $número_registros = dbase_numrecords($db);
+  for ($i = 1; $i <= $número_registros; $i++) {
+      $fila = dbase_get_record_with_names($db, $i);
+      $comparacion=str_replace(' ', '', $fila['RFC']);
+      $bandera=strcmp($comparacion, $rfc);
+       if($bandera == 0)
+         {
+        $clave=$fila['CLAVE'];
+         }
+  }
+  dbase_close($db);
+}
+return $clave;
+}
+
+
     /**
      * Show the form for creating a new resource.
      *
