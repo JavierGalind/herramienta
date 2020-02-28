@@ -7,6 +7,7 @@ use org\majkel\dbase\Table;
 use File;
 use Session;
 use App\Venta;
+use App\Factura;
 use DB;
 class PrincipalController extends Controller
 {
@@ -15,32 +16,40 @@ class PrincipalController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+     //////////PAGINA INICIAL DE CXC///////////
     public function index()
     {
     $valor = Session::get('clave');
     return view('cxc');
     }
+    //////////////////////////////////////
+    /////OBTENER LA CLAVE DE LA EMPRESA
 public function sesion(Request $request){
   Session::put('clave', $request->clave);
 return view('welcome1');
 }
+//////////////////LISTAR LAS EMPRESAS//////////////////////////
 public function empresa(Request $request){
   $dbf = Table::fromFile('Z:/Cuentas por cobrar/empresa1.dbf');
 return view('welcome',compact('dbf'));
 }
-
+//////////////////////////////////////
+////////////////VER LOS REGISTROS DE VENTAS REGISTRADAS/////////////////
 public function ver_regisrto(){
     $clave=Session::get('clave');
    $ventas = DB::table('ventas')->where('empresa', $clave)->get();
 return view('verregistro', compact('ventas'));
 }
-
-
+/////////////////////////////
+//////////////////LECTURA DE XMLS MASIVO////////////////////////////
 public function cxc(Request $request){
 $files= $request->filess;
 $ruta=str_replace("\"", '/', $request->url);
 $rut=$ruta."/";
 foreach ($files as $fil) {
+  $archivo=$fil;
+  $band=$this->comprobar_factura($archivo);
+  if($band==false){
   $comprobante = \CfdiUtils\Cfdi::newFromString(file_get_contents($rut.$fil))
       ->getQuickReader();
       $totalfactura= $comprobante['total'];
@@ -76,7 +85,22 @@ foreach ($files as $fil) {
 
 }
 /////////////FIN FOR QUE RECORRE TODOS LOS ARCHIVOS
+  }
 return redirect()->action('PrincipalController@ver_regisrto');
+}
+////////COMPROBAR FACTURA///////////////
+public function comprobar_factura($archivo){
+  $factura= DB::table('facturas')->where('nombre_factura', $archivo)->first();
+  $bandera=false;
+  if(is_null($factura)){
+    $registrar= new Factura;
+    $registrar->nombre_factura=$archivo;
+    $registrar->save();
+  }
+  else {
+    $bandera=true;
+  }
+  return $bandera;
 }
 ///////////REGISTRAR FACTURA
 public function registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion){

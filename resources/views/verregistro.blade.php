@@ -2,7 +2,7 @@
 
 @section('content')
   <h1>CFDI</h1>
-  <table class="table">
+  <table class="table" id="example1">
     <thead class="thead-dark">
       <tr>
         <th scope="col">REFERENCIA</th>
@@ -21,7 +21,7 @@
     <tbody>
       @foreach ($ventas as $ven)
         <tr>
-          <th scope="row">{{$ven->referencia}}</th>
+          <td>{{$ven->referencia}}</td>
           <td>{{$ven->folio}}</td>
           <td>{{$ven->fecha}}</td>
           <td>{{$ven->importe}}</td>
