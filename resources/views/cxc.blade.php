@@ -1,6 +1,7 @@
 @extends('Layouts.layout')
 
 @section('content')
+
   <h1>CUENTAS POR COBRAR</h1>
   <form id="form1" action="{{ url('cxc') }}" method="GET" enctype="multipart/form-data">
       <div class="form-group">

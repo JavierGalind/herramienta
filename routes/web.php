@@ -11,10 +11,10 @@
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
 
 Route::resource('/prueba', 'LecturaController');
 Route::get('/cxc', 'PrincipalController@cxc')->name('cxc');
 Route::get('/cxcindex', 'PrincipalController@index')->name('cxc.index');
+Route::get('/', 'PrincipalController@empresa')->name('empresa');
+Route::get('/verregistro', 'PrincipalController@ver_regisrto')->name('verregistro');
+Route::get('/sesion', 'PrincipalController@sesion')->name('sesion');
