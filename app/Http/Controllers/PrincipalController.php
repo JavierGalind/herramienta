@@ -49,39 +49,43 @@ $rut=$ruta."/";
 foreach ($files as $fil) {
   $archivo=$fil;
   $band=$this->comprobar_factura($archivo);
-  if($band==false){
+  if($band==true){
   $comprobante = \CfdiUtils\Cfdi::newFromString(file_get_contents($rut.$fil))
       ->getQuickReader();
-      $totalfactura= $comprobante['total'];
-      $foliofactura=$comprobante['folio'];
-      $tratarfecha=str_replace('-', '', $comprobante['fecha']);
-      $fechanueva=substr($tratarfecha, 0,8);
-      $dia=substr($fechanueva, 6,2);
-      $mes=substr($fechanueva, 4,2);
-      $anio=substr($fechanueva, 0,4);
-      $fechaarmada=$anio.$mes.$dia;
-      $tipo='1';
-    $rfc_emisor=$comprobante->emisor['rfc'];
-    $nombre_emisor=$comprobante->emisor['nombre'];
-    $this->registrar_proveedor($rfc_emisor,$nombre_emisor);
-    $proveedor= $this->consultar_proveedor($rfc_emisor);
-    //////////FIN COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
-    // usando asignación de variable
-    $conceptos = $comprobante->conceptos;
-     foreach($conceptos() as $concepto) {
-      // usando propiedad
+      if ($comprobante['tipodecomprobante'] != 'N') {
+        $totalfactura= $comprobante['total'];
+        $foliofactura=$comprobante['folio'];
+        $tratarfecha=str_replace('-', '', $comprobante['fecha']);
+        $fechanueva=substr($tratarfecha, 0,8);
+        $dia=substr($fechanueva, 6,2);
+        $mes=substr($fechanueva, 4,2);
+        $anio=substr($fechanueva, 0,4);
+        $fechaarmada=$anio.$mes.$dia;
+        $tipo='1';
+      $rfc_emisor=$comprobante->emisor['rfc'];
+      $nombre_emisor=$comprobante->emisor['nombre'];
+      $this->registrar_proveedor($rfc_emisor,$nombre_emisor);
+      $proveedor= $this->consultar_proveedor($rfc_emisor);
+      //////////FIN COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
+      // usando asignación de variable
+      $conceptos = $comprobante->conceptos;
+       foreach($conceptos() as $concepto) {
+        // usando propiedad
 
-    foreach(($concepto->impuestos->traslados)() as $traslado) {
-        $impuestos1=$traslado['importe'];
-    }
-    $importe=$concepto['importe'];
-    $concepto_sat=$concepto['claveprodserv'];
-    $descripcion=$concepto['descripcion'];
+      foreach(($concepto->impuestos->traslados)() as $traslado) {
+          $impuestos1=$traslado['importe'];
+          if(is_null($impuestos1)){
+            $impuestos1=0.00;
+          }
+      }
+      $importe=$concepto['importe'];
+      $concepto_sat=$concepto['claveprodserv'];
+      $descripcion=$concepto['descripcion'];
 
-    $this->registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion);
-    $this->registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion);
-}
-
+      ///$this->registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion);
+      $this->registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion, $archivo);
+  }
+      }
 
 }
 /////////////FIN FOR QUE RECORRE TODOS LOS ARCHIVOS
@@ -90,31 +94,55 @@ return redirect()->action('PrincipalController@ver_regisrto');
 }
 ////////COMPROBAR FACTURA///////////////
 public function comprobar_factura($archivo){
-  $factura= DB::table('facturas')->where('nombre_factura', $archivo)->first();
+  $factura= DB::table('ventas')->where('nombre_factura', $archivo)->first();
   $bandera=false;
   if(is_null($factura)){
-    $registrar= new Factura;
-    $registrar->nombre_factura=$archivo;
-    $registrar->save();
-  }
-  else {
     $bandera=true;
   }
   return $bandera;
 }
 ///////////REGISTRAR FACTURA
-public function registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion){
+public function cargardbf(Request $request){
   $clave=Session::get('clave');
-  $db = dbase_open('Z:/Cuentas por cobrar/'.$clave.'/archivos/ventas2.dbf', 2);
-  if ($db) {
-       dbase_add_record($db, array($foliofactura,$foliofactura,$fechaarmada,$importe,$impuestos1,'F','0.00',$fechaarmada,'F',$proveedor,$tipo,$concepto_sat,$descripcion,'0.00'));
-  dbase_close($db);
+  $valores=$request->indic;
+  for ($i=0; $i < count($valores) ; $i++) {
+    $val = DB::table('ventas')->where('id', $valores[$i])->first();
+    $referencia= $val->referencia;
+    $fecha=$val->fecha;
+    $importe=$val->importe;
+    $iva=$val->iva;
+    $clave_clie=$val->clave_clie;
+    $tipo=$val->tipo;
+    $concepto=$val->concepto;
+    $descripcion=$val->descripcion;
+    $id=$val->id;
+  $this->guardarenDBF($referencia, $importe, $iva, $fecha, $clave_clie, $tipo, $concepto, $descripcion);
+  $this->eliminarsql($id);
   }
+  return redirect()->action('PrincipalController@ver_regisrto');
 }
-public function registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion)
+
+public function eliminarsql($id){
+      $venta = Venta::whereid($id)->firstOrFail();
+      $venta->delete();
+}
+
+public function guardarenDBF($referencia, $importe, $iva, $fecha, $clave_clie, $tipo, $concepto, $descripcion){
+  $clave=Session::get('clave');
+ $db = dbase_open('Z:/Cuentas por cobrar/'.$clave.'/archivos/ventas2.dbf', 2);
+ if ($db) {
+      dbase_add_record($db, array($referencia,$referencia,$fecha,$importe,$iva,'F','0.00',$fecha,'F',$clave_clie,$tipo,$concepto,$descripcion,'0.00'));
+ dbase_close($db);
+ }
+}
+
+
+
+public function registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion, $archivo)
 {
 $clave= Session::get('clave');
 $empresa= new Venta;
+$empresa->nombre_factura=$archivo;
 $empresa->referencia=$foliofactura;
 $empresa->folio=$foliofactura;
 $empresa->fecha=$fechaarmada;
@@ -192,6 +220,17 @@ if ($db) {
 return $clave;
 }
 
+public function deleteAll(Request $request)
+ {
+     $ids = $request->ids;
+     //DB::table("ventas")->whereIn('id',explode(",",$ids))->delete();
+  return $ids;
+ }
+
+public function guardarDBF($ids){
+  echo "entramos aqui";
+  dd($ids);
+}
 
     /**
      * Show the form for creating a new resource.

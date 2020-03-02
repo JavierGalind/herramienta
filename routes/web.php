@@ -18,3 +18,4 @@ Route::get('/cxcindex', 'PrincipalController@index')->name('cxc.index');
 Route::get('/', 'PrincipalController@empresa')->name('empresa');
 Route::get('/verregistro', 'PrincipalController@ver_regisrto')->name('verregistro');
 Route::get('/sesion', 'PrincipalController@sesion')->name('sesion');
+Route::get('/cargardbf', 'PrincipalController@cargardbf')->name('cargardbf');

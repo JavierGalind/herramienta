@@ -15,6 +15,7 @@ class CreateVentasTable extends Migration
     {
         Schema::create('ventas', function (Blueprint $table) {
             $table->increments('id');
+            $table->string('nombre_factura');
             $table->string('referencia');
             $table->string('folio');
             $table->date('fecha');
