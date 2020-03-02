@@ -26,6 +26,22 @@ class PrincipalController extends Controller
     /////OBTENER LA CLAVE DE LA EMPRESA
 public function sesion(Request $request){
   Session::put('clave', $request->clave);
+  $db = dbase_open('Z:/Cuentas por cobrar/empresa1.dbf', 0);
+ $clv= Session::get('clave');
+if ($db) {
+  $número_registros = dbase_numrecords($db);
+  for ($i = 1; $i <= $número_registros; $i++) {
+      $fila = dbase_get_record_with_names($db, $i);
+      $comparacion=str_replace(' ', '', $fila['CLAVE_CLIE']);
+      $bandera=strcmp($comparacion, $clv);
+       if($bandera == 0)
+         {
+        $emp=$fila['NOMBRE'];
+        Session::put('empresa', $emp);
+         }
+  }
+  dbase_close($db);
+}
 return view('welcome1');
 }
 //////////////////LISTAR LAS EMPRESAS//////////////////////////
