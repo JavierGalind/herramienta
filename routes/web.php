@@ -19,3 +19,8 @@ Route::get('/', 'PrincipalController@empresa')->name('empresa');
 Route::get('/verregistro', 'PrincipalController@ver_regisrto')->name('verregistro');
 Route::get('/sesion', 'PrincipalController@sesion')->name('sesion');
 Route::get('/cargardbf', 'PrincipalController@cargardbf')->name('cargardbf');
+
+
+///CUENTAS POR PAGAR///
+Route::get('/cxpindex', 'CXPController@index')->name('cxp.index');
+Route::get('/cxp', 'CXPController@cxp')->name('cxp');

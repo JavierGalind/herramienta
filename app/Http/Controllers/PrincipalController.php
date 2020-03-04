@@ -157,19 +157,24 @@ public function guardarenDBF($referencia, $importe, $iva, $fecha, $clave_clie, $
 public function registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion, $archivo)
 {
 $clave= Session::get('clave');
-$empresa= new Venta;
+$empresa= new CXP;
 $empresa->nombre_factura=$archivo;
 $empresa->referencia=$foliofactura;
 $empresa->folio=$foliofactura;
+$empresa->pedido=$foliofactura;
 $empresa->fecha=$fechaarmada;
 $empresa->tipo=$tipo;
 $empresa->clave_clie=$proveedor;
 $empresa->importe=$importe;
 $empresa->iva=$impuestos1;
-$empresa->fechacobro=$fechaarmada;
-$empresa->concepto=$concepto_sat;
+$empresa->fecha_cobro=$fechaarmada;
+$empresa->fecha_doc=$fechaarmada;
 $empresa->descripcion=$descripcion;
-$empresa->impuesto='0.00';
+$empresa->impuesto=$retencion1;
+$empresa->cl_con="";
+$empresa->clv_con="";
+$empresa->impuesto=$retencion2;
+$empresa->impuesto=$retencion2;
 $empresa->empresa=$clave;
 $empresa->save();
 }
