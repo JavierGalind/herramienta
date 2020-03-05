@@ -16,20 +16,37 @@ class CXPController extends Controller
   return view('cxp');
   }
 
-
+  public function ver_regisrto(){
+      $clave=Session::get('clave');
+     $ventas = DB::table('c_x_ps')->where('empresa', $clave)->get();
+        $dbf = Table::fromFile('Z:/Cuentas por Pagar/'.$clave.'/archivos/concepto.dbf');
+  return view('verregistrocxp', compact('ventas','dbf'));
+  }
 
   public function cxp(Request $request){
-  $files= $request->filess;
-  $ruta=str_replace("\"", '/', $request->url);
-  $rut=$ruta."/";
-  foreach ($files as $fil) {
-    $archivo=$fil;
-    $band=$this->comprobar_factura($archivo);
-    if($band==true){
+    $files= $request->filess;
+    $ruta=str_replace("\"", '/', $request->url);
+    $rut=$ruta."/";
+    foreach ($files as $fil) {
+      $archivo=$fil;
+      $band=$this->comprobar_factura($archivo);
+      if($band==true){
     $comprobante = \CfdiUtils\Cfdi::newFromString(file_get_contents($rut.$fil))
         ->getQuickReader();
-        if ($comprobante['tipodecomprobante'] != 'N') {
+        if ($comprobante['tipodecomprobante'] != 'N' && $comprobante['tipodecomprobante'] != 'P') {
           $foliofactura=$comprobante['folio'];
+          $tipo_comprobante=$comprobante['tipodecomprobante'];
+          $descuento=$comprobante['descuento'];
+          if(is_null($descuento)){
+            $descuento='0.00';
+          }
+          $subtotal=intval($comprobante['subtotal'])-intval($comprobante['descuento']);
+          if(strlen($foliofactura)<1)
+          {
+            $folio=$comprobante->complemento->timbreFiscalDigital['UUID'];
+            $tratarfolio=str_replace('-', '', $folio);
+              $foliofactura=substr($tratarfolio, 26,6);
+          }
           $tratarfecha=str_replace('-', '', $comprobante['fecha']);
           $fechanueva=substr($tratarfecha, 0,8);
           $dia=substr($fechanueva, 6,2);
@@ -39,8 +56,8 @@ class CXPController extends Controller
           $tipo='1';
         $rfc_receptor=$comprobante->receptor['rfc'];
         $nombre_receptor=$comprobante->receptor['nombre'];
-        $this->registrar_proveedor($rfc_emisor,$nombre_emisor);
-        $proveedor= $this->consultar_proveedor($rfc_emisor);
+        $this->registrar_proveedor($rfc_receptor,$nombre_receptor);
+        $proveedor= $this->consultar_proveedor($rfc_receptor);
         //////////FIN COMPROBACION O REGISTRO DE EMISORES(PROVEEDORES)//////
         // usando asignación de variable
         $conceptos = $comprobante->conceptos;
@@ -69,14 +86,14 @@ else{
         $importe=$concepto['importe'];
         $descripcion=$concepto['descripcion'];
         ///$this->registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion);
-      $this->registrar_facturasql($foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $descripcion, $archivo, $retencion1, $retencion2);
+      $this->registrar_facturasql($foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $descripcion, $archivo, $retencion1, $retencion2, $tipo_comprobante,$nombre_receptor, $descuento, $subtotal);
     }
         }
   }
   /////////////FIN FOR QUE RECORRE TODOS LOS ARCHIVOS
     }
-  return redirect()->action('PrincipalController@ver_regisrto');
   }
+    return redirect()->action('CXPController@ver_regisrto');
 }
 
 ////////COMPROBAR FACTURA///////////////
@@ -90,22 +107,30 @@ public function comprobar_factura($archivo){
 }
 
 
-public function registrar_facturasql($foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $descripcion, $archivo, $retencion1, $retencion2)
+public function registrar_facturasql($foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $descripcion, $archivo, $retencion1, $retencion2, $tipo_comprobante,$nombre_receptor, $descuento, $subtotal)
 {
 $clave= Session::get('clave');
 $empresa= new CXP;
 $empresa->nombre_factura=$archivo;
+$empresa->tipo_comprobante=$tipo_comprobante;
+$empresa->nombre_cliente=$nombre_receptor;
+$empresa->descuento=intval($descuento);
+$empresa->subtotal=intval($subtotal);
 $empresa->referencia=$foliofactura;
 $empresa->folio=$foliofactura;
+$empresa->pedido=$foliofactura;
 $empresa->fecha=$fechaarmada;
 $empresa->tipo=$tipo;
 $empresa->clave_clie=$proveedor;
 $empresa->importe=$importe;
 $empresa->iva=$impuestos1;
-$empresa->fechacobro=$fechaarmada;
-$empresa->concepto=$concepto_sat;
-$empresa->descripcion=$descripcion;
-$empresa->impuesto='0.00';
+$empresa->fecha_cobro=$fechaarmada;
+$empresa->fecha_doc=$fechaarmada;
+$empresa->concepto=$descripcion;
+$empresa->cl_con="";
+$empresa->clv_con="";
+$empresa->impuesto=$retencion1;
+$empresa->impuesto2=$retencion2;
 $empresa->empresa=$clave;
 $empresa->save();
 }
@@ -113,7 +138,7 @@ $empresa->save();
 public function registrar_proveedor($rfc, $nombre){
   $cont1=0;
     $clave=Session::get('clave');
-  $db = dbase_open('Z:/Cuentas por cobrar/'.$clave.'/archivos/pruebas.dbf', 2);
+  $db = dbase_open('Z:/Cuentas por Pagar/'.$clave.'/archivos/pruebas.dbf', 2);
   if ($db) {
     $numero_registros = dbase_numrecords($db);
   ////  echo $numero_registros;
@@ -140,7 +165,8 @@ public function registrar_proveedor($rfc, $nombre){
         }
         if ($cont1 == 0) {
           $num_registro=$numero_registros+1;
-          dbase_add_record($db, array($num_registro,$nombre, $rfc));
+          $clv1=str_pad($num_registro, 4, "0", STR_PAD_LEFT);
+          dbase_add_record($db, array($clv1,$nombre, $rfc));
           echo "Registrado Proveedor";
         }
 
@@ -154,7 +180,7 @@ public function registrar_proveedor($rfc, $nombre){
 
 public function consultar_proveedor($rfc){
     $clave=Session::get('clave');
-  $db = dbase_open('C:/PUBLIC/contadores1/Cuentas por cobrar/'.$clave.'/archivos/pruebas.dbf', 0);
+  $db = dbase_open('Z:/Cuentas por Pagar/'.$clave.'/archivos/pruebas.dbf', 0);
 
 if ($db) {
   $número_registros = dbase_numrecords($db);
@@ -171,5 +197,51 @@ if ($db) {
 }
 return $clave;
 }
+
+
+
+
+
+
+///////////REGISTRAR FACTURA
+public function cargardbfcxp(Request $request){
+  $clave=Session::get('clave');
+  $valores=$request->indic;
+  $concept=$request->sel;
+  for ($i=0; $i < count($valores) ; $i++) {
+    $val = DB::table('c_x_ps')->where('id', $valores[$i])->first();
+    $iden=$val->id;
+    $referencia= $val->referencia;
+    $fecha=$val->fecha;
+    $importe=$val->importe;
+    $iva=$val->iva;
+    $clave_clie=$val->clave_clie;
+    $tipo=$val->tipo;
+    $concepto=$val->concepto;
+    $impuesto=$val->impuesto;
+    $impuesto2=$val->impuesto2;
+    $clv_con=$concept[$iden];
+    $cl_con=$concept[$iden];
+    $id=$val->id;
+  $this->guardarenDBFcxp($referencia, $importe, $iva, $fecha, $clave_clie, $tipo, $concepto, $impuesto,$impuesto2, $clv_con, $cl_con);
+  $this->eliminarsql($id);
+  }
+  return redirect()->action('CXPController@ver_regisrto');
+}
+
+public function eliminarsql($id){
+      $venta = CXP::whereid($id)->firstOrFail();
+      $venta->delete();
+}
+
+public function guardarenDBFcxp($referencia, $importe, $iva, $fecha, $clave_clie, $tipo, $concepto, $impuesto,$impuesto2, $clv_con, $cl_con){
+  $clave=Session::get('clave');
+ $db = dbase_open('Z:/Cuentas por Pagar/'.$clave.'/archivos/ventas2.dbf', 2);
+ if ($db) {
+      dbase_add_record($db, array($referencia,$referencia,$referencia,$fecha,$importe,$iva,$fecha,$clave_clie,$tipo,$concepto,$impuesto,$impuesto2,$clv_con,$cl_con,$fecha,'F'));
+ dbase_close($db);
+ }
+}
+
 
 }

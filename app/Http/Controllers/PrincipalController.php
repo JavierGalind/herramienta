@@ -46,7 +46,7 @@ return view('welcome1');
 }
 //////////////////LISTAR LAS EMPRESAS//////////////////////////
 public function empresa(Request $request){
-  $dbf = Table::fromFile('Z:/Cuentas por cobrar/empresa1.dbf');
+  $dbf = Table::fromFile('Z:/Cuentas por cobrar/empresa.dbf');
 return view('welcome',compact('dbf'));
 }
 //////////////////////////////////////
@@ -68,7 +68,20 @@ foreach ($files as $fil) {
   if($band==true){
   $comprobante = \CfdiUtils\Cfdi::newFromString(file_get_contents($rut.$fil))
       ->getQuickReader();
-      if ($comprobante['tipodecomprobante'] != 'N') {
+      if ($comprobante['tipodecomprobante'] != 'N' && $comprobante['tipodecomprobante'] != 'P') {
+        $foliofactura=$comprobante['folio'];
+        $tipo_comprobante=$comprobante['tipodecomprobante'];
+        $descuento=$comprobante['descuento'];
+        if(is_null($descuento)){
+          $descuento='0.00';
+        }
+        $subtotal=intval($comprobante['subtotal'])-intval($comprobante['descuento']);
+        if(strlen($foliofactura)<1)
+        {
+          $folio=$comprobante->complemento->timbreFiscalDigital['UUID'];
+          $tratarfolio=str_replace('-', '', $folio);
+            $foliofactura=substr($tratarfolio, 26,6);
+        }
         $totalfactura= $comprobante['total'];
         $foliofactura=$comprobante['folio'];
         $tratarfecha=str_replace('-', '', $comprobante['fecha']);
@@ -99,7 +112,7 @@ foreach ($files as $fil) {
       $descripcion=$concepto['descripcion'];
 
       ///$this->registrar_factura($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion);
-      $this->registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion, $archivo);
+      $this->registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion, $archivo, $tipo_comprobante,$nombre_emisor, $descuento, $subtotal);
   }
       }
 
@@ -154,27 +167,27 @@ public function guardarenDBF($referencia, $importe, $iva, $fecha, $clave_clie, $
 
 
 
-public function registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion, $archivo)
+public function registrar_facturasql($totalfactura, $foliofactura, $fechaarmada, $tipo, $proveedor, $impuestos1, $importe, $concepto_sat, $descripcion, $archivo, $tipo_comprobante,$nombre_emisor, $descuento, $subtotal)
 {
 $clave= Session::get('clave');
-$empresa= new CXP;
+$empresa= new Venta;
 $empresa->nombre_factura=$archivo;
+$empresa->tipo_comprobante=$tipo_comprobante;
+$empresa->nombre_cliente=$nombre_emisor;
+$empresa->descuento=intval($descuento);
+$empresa->subtotal=$subtotal;
 $empresa->referencia=$foliofactura;
 $empresa->folio=$foliofactura;
-$empresa->pedido=$foliofactura;
 $empresa->fecha=$fechaarmada;
 $empresa->tipo=$tipo;
 $empresa->clave_clie=$proveedor;
 $empresa->importe=$importe;
+$empresa->subtotal=$subtotal;
 $empresa->iva=$impuestos1;
-$empresa->fecha_cobro=$fechaarmada;
-$empresa->fecha_doc=$fechaarmada;
+$empresa->fechacobro=$fechaarmada;
+$empresa->concepto=$concepto_sat;
 $empresa->descripcion=$descripcion;
-$empresa->impuesto=$retencion1;
-$empresa->cl_con="";
-$empresa->clv_con="";
-$empresa->impuesto=$retencion2;
-$empresa->impuesto=$retencion2;
+$empresa->impuesto='0.00';
 $empresa->empresa=$clave;
 $empresa->save();
 }
@@ -209,7 +222,8 @@ public function registrar_proveedor($rfc, $nombre){
         }
         if ($cont1 == 0) {
           $num_registro=$numero_registros+1;
-          dbase_add_record($db, array($num_registro,$nombre, $rfc));
+          $clv1=str_pad($num_registro, 4, "0", STR_PAD_LEFT);
+          dbase_add_record($db, array($clv1,$nombre, $rfc));
           echo "Registrado Proveedor";
         }
 

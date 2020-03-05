@@ -24,3 +24,5 @@ Route::get('/cargardbf', 'PrincipalController@cargardbf')->name('cargardbf');
 ///CUENTAS POR PAGAR///
 Route::get('/cxpindex', 'CXPController@index')->name('cxp.index');
 Route::get('/cxp', 'CXPController@cxp')->name('cxp');
+Route::get('/verregistrocxp', 'CXPController@ver_regisrto')->name('verregistrocxp');
+Route::get('/cargardbfcxp', 'CXPController@cargardbfcxp')->name('cargardbfcxp');
