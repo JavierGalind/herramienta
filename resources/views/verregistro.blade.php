@@ -1,7 +1,7 @@
 @extends('Layouts.layout')
 
 @section('content')
-  <h1>CFDI</h1>
+    <h1 style="color:blue;">CFDI CXC DE LA EMPRESA: {{Session::get('empresa')}}</h1> <a class="btn btn-primary" href="{{route('empresa')}}" role="button">CAMBIAR EMPRESA</a>
   <form class="" action="{{route('cargardbf')}}" method="get">
     <table class="table">
   <thead class="thead-dark">
